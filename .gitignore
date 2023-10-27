@@ -29,7 +29,7 @@ ipch
 JSON/
 
 ## Commonly used CMake directories
-build*/
+##build*/
 
 ## Xcode artifacts
 project.xcworkspace
