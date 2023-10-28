@@ -13,6 +13,8 @@ examples/*/Release/*
 examples/*/x64/*
 
 ## Visual Studio artifacts
+.bin
+.obj
 .vs
 ipch
 *.opensdf
