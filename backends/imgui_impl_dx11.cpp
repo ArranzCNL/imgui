@@ -12,6 +12,9 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-03-09: Removed Memset/ZeroMemory intialization usage in favor of Vulkan style {}. - ArranzCNL
+//  2023-03-09: Misc: Fixed warning(s) from ImGui_ImplDX11_CreateFontsTexture. - ArranzCNL
+//  2023-03-09: D3DCompile: Added automatic detection of D3DCompiler_XX.dll which searches system directory to acquire the D3DCompile pointer. (ImGui_ImplDX11_CreateDeviceObjects) - ArranzCNL
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-05-19: DirectX11: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
@@ -37,10 +40,11 @@
 // DirectX
 #include <stdio.h>
 #include <d3d11.h>
-#include <d3dcompiler.h>
-#ifdef _MSC_VER
-#pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
-#endif
+
+// Detect which D3DCompiler_XX.dll is present inside of System32 and grab a pointer to D3DCompile. Searches from MAX_D3DCOMPILE_VERSION to MIN_D3DCOMPILE_VERSION.
+constexpr int MAX_D3DCOMPILE_VERSION = 47;
+constexpr int MIN_D3DCOMPILE_VERSION = 33;
+typedef HRESULT(WINAPI* pD3DCompile)(LPCVOID, SIZE_T, LPCSTR, CONST D3D_SHADER_MACRO*, ID3DInclude*, LPCSTR, LPCSTR, UINT, UINT, ID3DBlob**, ID3DBlob**);
 
 // DirectX11 data
 struct ImGui_ImplDX11_Data
@@ -83,8 +87,7 @@ static void ImGui_ImplDX11_SetupRenderState(ImDrawData* draw_data, ID3D11DeviceC
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
 
     // Setup viewport
-    D3D11_VIEWPORT vp;
-    memset(&vp, 0, sizeof(D3D11_VIEWPORT));
+    D3D11_VIEWPORT vp{};
     vp.Width = draw_data->DisplaySize.x;
     vp.Height = draw_data->DisplaySize.y;
     vp.MinDepth = 0.0f;
@@ -130,8 +133,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     {
         if (bd->pVB) { bd->pVB->Release(); bd->pVB = nullptr; }
         bd->VertexBufferSize = draw_data->TotalVtxCount + 5000;
-        D3D11_BUFFER_DESC desc;
-        memset(&desc, 0, sizeof(D3D11_BUFFER_DESC));
+        D3D11_BUFFER_DESC desc{};
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.ByteWidth = bd->VertexBufferSize * sizeof(ImDrawVert);
         desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -144,8 +146,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     {
         if (bd->pIB) { bd->pIB->Release(); bd->pIB = nullptr; }
         bd->IndexBufferSize = draw_data->TotalIdxCount + 10000;
-        D3D11_BUFFER_DESC desc;
-        memset(&desc, 0, sizeof(D3D11_BUFFER_DESC));
+        D3D11_BUFFER_DESC desc{};
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.ByteWidth = bd->IndexBufferSize * sizeof(ImDrawIdx);
         desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
@@ -220,7 +221,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
         DXGI_FORMAT                 IndexBufferFormat;
         ID3D11InputLayout*          InputLayout;
     };
-    BACKUP_DX11_STATE old = {};
+    BACKUP_DX11_STATE old{};
     old.ScissorRectsCount = old.ViewportsCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
     ctx->RSGetScissorRects(&old.ScissorRectsCount, old.ScissorRects);
     ctx->RSGetViewports(&old.ViewportsCount, old.Viewports);
@@ -316,8 +317,7 @@ static void ImGui_ImplDX11_CreateFontsTexture()
 
     // Upload texture to graphics system
     {
-        D3D11_TEXTURE2D_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
+        D3D11_TEXTURE2D_DESC desc{};
         desc.Width = width;
         desc.Height = height;
         desc.MipLevels = 1;
@@ -329,7 +329,7 @@ static void ImGui_ImplDX11_CreateFontsTexture()
         desc.CPUAccessFlags = 0;
 
         ID3D11Texture2D* pTexture = nullptr;
-        D3D11_SUBRESOURCE_DATA subResource;
+        D3D11_SUBRESOURCE_DATA subResource{};
         subResource.pSysMem = pixels;
         subResource.SysMemPitch = desc.Width * 4;
         subResource.SysMemSlicePitch = 0;
@@ -337,14 +337,16 @@ static void ImGui_ImplDX11_CreateFontsTexture()
         IM_ASSERT(pTexture != nullptr);
 
         // Create texture view
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-        ZeroMemory(&srvDesc, sizeof(srvDesc));
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = desc.MipLevels;
         srvDesc.Texture2D.MostDetailedMip = 0;
-        bd->pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &bd->pFontTextureView);
-        pTexture->Release();
+        if (pTexture)
+        {
+            bd->pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &bd->pFontTextureView);
+            pTexture->Release();
+        }
     }
 
     // Store our identifier
@@ -353,8 +355,7 @@ static void ImGui_ImplDX11_CreateFontsTexture()
     // Create texture sampler
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     {
-        D3D11_SAMPLER_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
+        D3D11_SAMPLER_DESC desc{};
         desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
         desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
         desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -375,11 +376,24 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
     if (bd->pFontSampler)
         ImGui_ImplDX11_InvalidateDeviceObjects();
 
-    // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
-    // If you would like to use this DX11 sample code but remove this dependency you can:
-    //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
-    //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL.
-    // See https://github.com/ocornut/imgui/pull/638 for sources and details.
+    static pD3DCompile D3DCompile = nullptr;
+    if (!D3DCompile)
+    {
+        char filePath[MAX_PATH];
+        if (!GetSystemDirectoryA(filePath, MAX_PATH))
+            return false;
+
+        for (int i = MAX_D3DCOMPILE_VERSION; i > MIN_D3DCOMPILE_VERSION && !D3DCompile; i--)
+        {
+            char dllFile[MAX_PATH];
+            sprintf_s(dllFile, "%s\\d3dcompiler_%02d.dll", filePath, i);
+
+            if (HMODULE hD3DCompiler_XX = LoadLibraryA(dllFile))
+                D3DCompile = (pD3DCompile)GetProcAddress(hD3DCompiler_XX, "D3DCompile");
+        }
+        if (!D3DCompile)
+            return false;
+    }
 
     // Create the vertex shader
     {
@@ -436,7 +450,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
 
         // Create the constant buffer
         {
-            D3D11_BUFFER_DESC desc;
+            D3D11_BUFFER_DESC desc{};
             desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER_DX11);
             desc.Usage = D3D11_USAGE_DYNAMIC;
             desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -477,8 +491,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
 
     // Create the blending setup
     {
-        D3D11_BLEND_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
+        D3D11_BLEND_DESC desc{};
         desc.AlphaToCoverageEnable = false;
         desc.RenderTarget[0].BlendEnable = true;
         desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
@@ -493,8 +506,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
 
     // Create the rasterizer state
     {
-        D3D11_RASTERIZER_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
+        D3D11_RASTERIZER_DESC desc{};
         desc.FillMode = D3D11_FILL_SOLID;
         desc.CullMode = D3D11_CULL_NONE;
         desc.ScissorEnable = true;
@@ -504,8 +516,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
 
     // Create depth-stencil State
     {
-        D3D11_DEPTH_STENCIL_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
+        D3D11_DEPTH_STENCIL_DESC desc{};
         desc.DepthEnable = false;
         desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
         desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
