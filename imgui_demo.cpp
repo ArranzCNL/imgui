@@ -184,7 +184,7 @@ Index of this file:
 // [SECTION] Forward Declarations, Helpers
 //-----------------------------------------------------------------------------
 
-#if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
+#if defined(IMGUI_ENABLE_DEMO_WINDOWS)
 
 // Forward Declarations
 static void ShowExampleAppMainMenuBar();
@@ -6099,7 +6099,9 @@ void ImGui::ShowAboutWindow(bool* p_open)
         ImGui::End();
         return;
     }
+#if defined(IMGUI_ENABLE_DEMO_WINDOWS)
     IMGUI_DEMO_MARKER("Tools/About Dear ImGui");
+#endif
     ImGui::Text("Dear ImGui %s (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     ImGui::Separator();
     ImGui::Text("By Omar Cornut and all Dear ImGui contributors.");

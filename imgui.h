@@ -29,6 +29,11 @@
 #define IMGUI_VERSION_NUM   18990
 #define IMGUI_HAS_TABLE
 
+//  2023-03-14: Moved ImGui::ShowAboutWindow (imgui_demo.cpp) outside of the strip. - ArranzCNL
+//  2023-03-14: Added debug check to strip demo windows. - ArranzCNL
+#ifdef _DEBUG
+#define IMGUI_ENABLE_DEMO_WINDOWS
+#endif
 /*
 
 Index of this file:
