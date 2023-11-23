@@ -13737,13 +13737,17 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 DebugTextEncoding(buf);
             TreePop();
         }
-
+#ifndef _DEBUG
+        ImGui::BeginDisabled();
+#endif
         // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
         if (Checkbox("Show Item Picker", &g.DebugItemPickerActive) && g.DebugItemPickerActive)
             DebugStartItemPicker();
         SameLine();
         MetricsHelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
-
+#ifndef _DEBUG
+        ImGui::EndDisabled();
+#endif
         // Stack Tool is your best friend!
         Checkbox("Show Debug Log", &cfg->ShowDebugLog);
         SameLine();
