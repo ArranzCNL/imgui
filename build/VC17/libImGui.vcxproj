@@ -81,7 +81,7 @@
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
       <BuildStlModules>false</BuildStlModules>
       <UseFullPaths>false</UseFullPaths>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
     </ClCompile>
@@ -108,6 +108,7 @@
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
       <BuildStlModules>false</BuildStlModules>
       <UseFullPaths>false</UseFullPaths>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
